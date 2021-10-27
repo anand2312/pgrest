@@ -1,6 +1,7 @@
 import pytest
 from httpx import AsyncClient
-from postgrest_py.request_builder import FilterRequestBuilder
+
+from pgrest.request_builder import FilterRequestBuilder
 
 
 @pytest.fixture
@@ -27,7 +28,7 @@ def test_not_(filter_request_builder):
 def test_filter(filter_request_builder):
     builder = filter_request_builder.filter(":col.name", "eq", "val")
 
-    assert builder.session.params['%22:col.name%22'] == "eq.val"
+    assert builder.session.params["%22:col.name%22"] == "eq.val"
 
 
 def test_multivalued_param(filter_request_builder):
@@ -37,5 +38,5 @@ def test_multivalued_param(filter_request_builder):
 
 
 def test_match(filter_request_builder):
-    builder = filter_request_builder.match({'id': '1', 'done': 'false'})
-    assert str(builder.session.params) == 'id=eq.1&done=eq.false'
+    builder = filter_request_builder.match({"id": "1", "done": "false"})
+    assert str(builder.session.params) == "id=eq.1&done=eq.false"

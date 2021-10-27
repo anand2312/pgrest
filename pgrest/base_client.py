@@ -4,7 +4,7 @@ from typing import AnyStr, Optional, TypeVar, Union
 
 from httpx import AsyncClient, BasicAuth, Client
 
-from postgrest_py.request_builder import RequestBuilder
+from pgrest.request_builder import RequestBuilder
 
 T = TypeVar("T", bound="BaseClient")
 

@@ -1,6 +1,7 @@
 import pytest
 from httpx import AsyncClient
-from postgrest_py.request_builder import QueryRequestBuilder
+
+from pgrest.request_builder import QueryRequestBuilder
 
 
 @pytest.fixture

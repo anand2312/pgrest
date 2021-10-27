@@ -1,15 +1,16 @@
-from __future__  import annotations
+from __future__ import annotations
+
 from types import TracebackType
-from typing import Dict, Optional, Type
+from typing import Optional, Type
 
-from httpx import Client, Response
+from httpx import Client as _Client
+from httpx import Response
 
-from postgrest_py.__version__ import __version__
-from postgrest_py.base_client import BaseClient
-from postgrest_py.constants import DEFAULT_POSTGREST_CLIENT_HEADERS
+from pgrest.base_client import BaseClient
+from pgrest.constants import DEFAULT_POSTGREST_CLIENT_HEADERS
 
 
-class PostgrestClient(BaseClient):
+class Client(BaseClient):
     """Synchronous PostgREST client."""
 
     def __init__(
@@ -17,19 +18,24 @@ class PostgrestClient(BaseClient):
         base_url: str,
         *,
         schema: str = "public",
-        headers: Dict[str, str] = DEFAULT_POSTGREST_CLIENT_HEADERS,
+        headers: dict[str, str] = DEFAULT_POSTGREST_CLIENT_HEADERS,
     ) -> None:
         headers = {
             **headers,
             "Accept-Profile": schema,
             "Content-Profile": schema,
         }
-        self.session: Client = Client(base_url=base_url, headers=headers)
+        self.session: _Client = _Client(base_url=base_url, headers=headers)
 
-    def __enter__(self) -> PostgrestClient:
+    def __enter__(self) -> Client:
         return self
 
-    def __exit__(self, exc_type: Optional[Type[BaseException]], exc: Optional[BaseException], tb: Optional[TracebackType]) -> None:
+    def __exit__(
+        self,
+        exc_type: Optional[Type[BaseException]],
+        exc: Optional[BaseException],
+        tb: Optional[TracebackType],
+    ) -> None:
         self.session.close()
 
     def close(self) -> None:
@@ -38,6 +44,6 @@ class PostgrestClient(BaseClient):
 
     def rpc(self, func: str, params: dict) -> Response:
         """Perform a stored procedure call."""
-        path = f"/rpc/{func}"
+        path = self._get_rpc_path(func)
         r = self.session.post(path, json=params)
         return r

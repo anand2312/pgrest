@@ -1,16 +1,17 @@
 import pytest
 from httpx import BasicAuth, Headers
-from postgrest_py import PostgrestClient
+
+from pgrest import Client
 
 
 @pytest.fixture
 def postgrest_client():
-    with PostgrestClient("https://example.com") as client:
+    with Client("https://example.com") as client:
         yield client
 
 
 class TestConstructor:
-    def test_simple(self, postgrest_client: PostgrestClient):
+    def test_simple(self, postgrest_client: Client):
         session = postgrest_client.session
 
         assert session.base_url == "https://example.com"
@@ -25,7 +26,7 @@ class TestConstructor:
         assert session.headers.items() >= headers.items()
 
     def test_custom_headers(self):
-        with PostgrestClient(
+        with Client(
             "https://example.com", schema="pub", headers={"Custom-Header": "value"}
         ) as client:
             session = client.session
@@ -42,13 +43,13 @@ class TestConstructor:
 
 
 class TestAuth:
-    def test_auth_token(self, postgrest_client: PostgrestClient):
+    def test_auth_token(self, postgrest_client: Client):
         postgrest_client.auth("s3cr3t")
         session = postgrest_client.session
 
         assert session.headers["Authorization"] == "Bearer s3cr3t"
 
-    def test_auth_basic(self, postgrest_client: PostgrestClient):
+    def test_auth_basic(self, postgrest_client: Client):
         postgrest_client.auth(None, username="admin", password="s3cr3t")
         session = postgrest_client.session
 
@@ -56,7 +57,7 @@ class TestAuth:
         assert session.auth._auth_header == BasicAuth("admin", "s3cr3t")._auth_header
 
 
-def test_schema(postgrest_client: PostgrestClient):
+def test_schema(postgrest_client: Client):
     postgrest_client.schema("private")
     session = postgrest_client.session
     subheaders = {

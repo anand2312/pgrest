@@ -1,23 +1,22 @@
+from __future__ import annotations
+
 import re
 import sys
 from contextlib import suppress
-from typing import Any, Awaitable, Dict, Iterable, Optional, Tuple, Union
+from typing import Any, Awaitable, Iterable, Optional, Union
 
 if sys.version_info < (3, 8):
     from typing_extensions import Literal
 else:
     from typing import Literal
 
-from deprecation import deprecated
 from httpx import AsyncClient, Client, Response
 
-from postgrest_py.__version__ import __version__
-from postgrest_py.utils import sanitize_param, sanitize_pattern_param
-
+from pgrest.utils import sanitize_param, sanitize_pattern_param
 
 CountMethod = Literal["exact", "planned", "estimated"]
 RequestMethod = Literal["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"]
-TableResponse = Tuple[Any, Optional[int]]
+TableResponse = tuple[Any, Optional[int]]
 
 
 class RequestBuilder:
@@ -62,29 +61,39 @@ class RequestBuilder:
 
 
 class QueryRequestBuilder:
-    def __init__(self, session: Union[AsyncClient, Client], path: str, http_method: RequestMethod, json: dict):
+    def __init__(
+        self,
+        session: Union[AsyncClient, Client],
+        path: str,
+        http_method: RequestMethod,
+        json: dict,
+    ):
         self.session = session
         self.path = path
         self.http_method: RequestMethod = http_method
         self.json = json
 
-    def _sync_request(self, method: RequestMethod, path: str, json: dict) -> Optional[TableResponse]:
+    def _sync_request(
+        self, method: RequestMethod, path: str, json: dict
+    ) -> Optional[TableResponse]:
         if isinstance(self.session, AsyncClient):
             return
 
         r = self.session.request(method, path, json=json)
         return self._handle_response(r)
 
-    async def _async_request(self, method: RequestMethod, path: str, json: dict) -> Optional[TableResponse]:
+    async def _async_request(
+        self, method: RequestMethod, path: str, json: dict
+    ) -> Optional[TableResponse]:
         if isinstance(self.session, Client):
             return
 
         r = await self.session.request(method, path, json=json)
         return self._handle_response(r)
 
-    def _handle_response(self, r: Response) -> Tuple[Any, Optional[int]]:
+    def _handle_response(self, r: Response) -> tuple[Any, Optional[int]]:
         count = None
-        
+
         with suppress(KeyError):
             count_header_match = re.search(
                 "count=(exact|planned|estimated)", self.session.headers["prefer"]
@@ -104,7 +113,13 @@ class QueryRequestBuilder:
 
 
 class FilterRequestBuilder(QueryRequestBuilder):
-    def __init__(self, session: Union[AsyncClient, Client], path: str, http_method: RequestMethod, json: dict):
+    def __init__(
+        self,
+        session: Union[AsyncClient, Client],
+        path: str,
+        http_method: RequestMethod,
+        json: dict,
+    ):
         super().__init__(session, path, http_method, json)
 
         self.negate_next = False
@@ -182,22 +197,22 @@ class FilterRequestBuilder(QueryRequestBuilder):
         values = ",".join(values)
         return self.filter(column, "ov", f"{{values}}")
 
-    def sl(self, column: str, range: Tuple[int, int]):
+    def sl(self, column: str, range: tuple[int, int]):
         return self.filter(column, "sl", f"({range[0]},{range[1]})")
 
-    def sr(self, column: str, range: Tuple[int, int]):
+    def sr(self, column: str, range: tuple[int, int]):
         return self.filter(column, "sr", f"({range[0]},{range[1]})")
 
-    def nxl(self, column: str, range: Tuple[int, int]):
+    def nxl(self, column: str, range: tuple[int, int]):
         return self.filter(column, "nxl", f"({range[0]},{range[1]})")
 
-    def nxr(self, column: str, range: Tuple[int, int]):
+    def nxr(self, column: str, range: tuple[int, int]):
         return self.filter(column, "nxr", f"({range[0]},{range[1]})")
 
-    def adj(self, column: str, range: Tuple[int, int]):
+    def adj(self, column: str, range: tuple[int, int]):
         return self.filter(column, "adj", f"({range[0]},{range[1]})")
 
-    def match(self, query: Dict[str, Any]):
+    def match(self, query: dict[str, Any]):
         updated_query = None
         for key in query.keys():
             value = query.get(key, "")
@@ -226,11 +241,3 @@ class SelectRequestBuilder(FilterRequestBuilder):
     def single(self):
         self.session.headers["Accept"] = "application/vnd.pgrst.object+json"
         return self
-
-
-class GetRequestBuilder(SelectRequestBuilder):
-    """Alias to SelectRequestBuilder."""
-
-    @deprecated("0.4.0", "1.0.0", __version__, "Use SelectRequestBuilder instead")
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)

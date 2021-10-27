@@ -2,12 +2,9 @@ from __future__ import annotations
 
 from typing import AnyStr, Optional, TypeVar, Union
 
-from deprecation import deprecated
-from httpx import Client, AsyncClient, BasicAuth
+from httpx import AsyncClient, BasicAuth, Client
 
-from postgrest_py.__version__ import __version__
 from postgrest_py.request_builder import RequestBuilder
-
 
 T = TypeVar("T", bound="BaseClient")
 
@@ -15,6 +12,10 @@ T = TypeVar("T", bound="BaseClient")
 class BaseClient:
     def __init__(self) -> None:
         self.session: Union[Client, AsyncClient]
+
+    @staticmethod
+    def _get_rpc_path(func: str) -> str:
+        return f"/rpc/{func}"
 
     def auth(
         self: T,
@@ -47,8 +48,3 @@ class BaseClient:
     def from_(self, table: str) -> RequestBuilder:
         """Perform a table operation."""
         return RequestBuilder(self.session, f"/{table}")
-
-    @deprecated("0.2.0", "1.0.0", __version__, "Use PostgrestClient.from_() instead")
-    def from_table(self, table: str) -> RequestBuilder:
-        """Alias to Self.from_()."""
-        return self.from_(table)

@@ -1,0 +1,47 @@
+site_name: pgrest-client
+site_url: https://anand2312.github.io/pgrest-client
+site_description: Documentation for pgrest-client.
+site_author: anand2312
+
+theme:
+  features:
+    - navigation.top
+  name: "material"
+  palette:
+    - scheme: slate
+      primary: pink
+      toggle:
+        icon: material/eye-outline
+        name: Switch to light mode
+    - scheme: default
+      primary: pink
+      toggle:
+        icon: material/eye
+        name: Switch to dark mode
+nav:
+  - Home: index.md
+  - Examples: examples.md
+  - Changelog: changelog.md
+  - Reference:
+      - Client: reference/client.md
+      - Builders: reference/builders.md
+
+plugins:
+  - search
+  - mkdocstrings:
+      default_handler: python
+      handlers:
+        python:
+          rendering:
+            show_source: false
+            show_root_heading: true
+
+repo_name: anand2312/pgrest-client
+repo_url: https://github.com/anand2312/pgrest-client
+
+markdown_extensions:
+  - pymdownx.highlight
+  - pymdownx.superfences
+  - admonition
+  - toc:
+      permalink: "#"

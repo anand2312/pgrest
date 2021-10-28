@@ -20,11 +20,29 @@ TableResponse = tuple[Any, Optional[int]]
 
 
 class RequestBuilder:
-    def __init__(self, session: Union[AsyncClient, Client], path: str):
+    def __init__(self, session: Union[AsyncClient, Client], path: str) -> None:
+        """
+        Create a RequestBuilder.
+
+        Args:
+            session: The httpx session to use to make requests.
+            path: The API path to make requests to.
+        """
         self.session = session
         self.path = path
 
-    def select(self, *columns: str, count: Optional[CountMethod] = None):
+    def select(
+        self, *columns: str, count: Optional[CountMethod] = None
+    ) -> SelectRequestBuilder:
+        """
+        Run a SELECT query to fetch data.
+
+        Args:
+            columns: The names of columns to retrieve. Pass * for all columns.
+            count: The method to be used to get the count of records that will be returned.
+        Returns:
+            [pgrest.request_builder.SelectRequestBuilder][]
+        """
         if columns:
             method = "GET"
             self.session.params = self.session.params.set("select", ",".join(columns))
@@ -36,23 +54,53 @@ class RequestBuilder:
 
         return SelectRequestBuilder(self.session, self.path, method, {})
 
-    def insert(self, json: dict, *, count: Optional[CountMethod] = None, upsert=False):
+    def insert(
+        self, row: dict, *, count: Optional[CountMethod] = None, upsert: bool = False
+    ) -> QueryRequestBuilder:
+        """
+        Run an INSERT query to add data to a table.
+
+        Args:
+            row: The row to be inserted, as a dictionary, with the column names as keys.
+            count:  The method to be used to get the count of records that will be returned.
+            upsert: Whether to run an upsert.
+        Returns:
+            [pgrest.request_builder.QueryRequestBuilder][]
+        """
         prefer_headers = ["return=representation"]
         if count:
             prefer_headers.append(f"count={count}")
         if upsert:
             prefer_headers.append("resolution=merge-duplicates")
         self.session.headers["prefer"] = ",".join(prefer_headers)
-        return QueryRequestBuilder(self.session, self.path, "POST", json)
+        return QueryRequestBuilder(self.session, self.path, "POST", row)
 
-    def update(self, json: dict, *, count: Optional[CountMethod] = None):
+    def update(
+        self, data: dict, *, count: Optional[CountMethod] = None
+    ) -> FilterRequestBuilder:
+        """
+        Run an UPDATE query.
+
+        Args:
+            data: The new row data, as a dictionary, with the column names as keys.
+            count:  The method to be used to get the count of records that will be returned.
+        Returns:
+            [pgrest.request_builder.FilterRequestBuilder][]
+        """
         prefer_headers = ["return=representation"]
         if count:
             prefer_headers.append(f"count={count}")
         self.session.headers["prefer"] = ",".join(prefer_headers)
-        return FilterRequestBuilder(self.session, self.path, "PATCH", json)
+        return FilterRequestBuilder(self.session, self.path, "PATCH", data)
 
-    def delete(self, *, count: Optional[CountMethod] = None):
+    def delete(self, *, count: Optional[CountMethod] = None) -> FilterRequestBuilder:
+        """
+        Run a DELETE query to remove rows from a table.
+
+        Args:
+            count:  The method to be used to get the count of records that will be returned.
+        Returns:
+            [pgrest.request_builder.FilterRequestBuilder][]"""
         prefer_headers = ["return=representation"]
         if count:
             prefer_headers.append(f"count={count}")

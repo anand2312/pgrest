@@ -66,7 +66,7 @@ class BaseClient:
         Args:
             table: The name of the table to query from.
         Returns:
-            RequestBuilder
+            [RequestBuilder][pgrest.request_builder.RequestBuilder]
         """
         return RequestBuilder(self.session, f"/{table}")
 
@@ -78,7 +78,7 @@ class BaseClient:
             func: The name of the PostgreSQL stored procedure (function) to run.
             params: Named parameters to pass to the function.
         Returns:
-            FilterRequestBuilder: Apply filters to the result of the function, if the function returns a table.
+            [FilterRequestBuilder][pgrest.request_builder.FilterRequestBuilder]
         """
         path = self._get_rpc_path(func)
         return FilterRequestBuilder(self.session, path, "POST", params)

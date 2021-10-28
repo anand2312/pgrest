@@ -21,13 +21,6 @@ TableResponse = tuple[Any, Optional[int]]
 
 class RequestBuilder:
     def __init__(self, session: Union[AsyncClient, Client], path: str) -> None:
-        """
-        Create a RequestBuilder.
-
-        Args:
-            session: The httpx session to use to make requests.
-            path: The API path to make requests to.
-        """
         self.session = session
         self.path = path
 
@@ -39,9 +32,9 @@ class RequestBuilder:
 
         Args:
             columns: The names of columns to retrieve. Pass * for all columns.
-            count: The method to be used to get the count of records that will be returned.
+            count: The method to be used to get the count of records that will be returned. One of "exact", "planned" or "estimated".
         Returns:
-            [pgrest.request_builder.SelectRequestBuilder][]
+            [SelectRequestBuilder][pgrest.request_builder.SelectRequestBuilder]
         """
         if columns:
             method = "GET"
@@ -62,10 +55,10 @@ class RequestBuilder:
 
         Args:
             row: The row to be inserted, as a dictionary, with the column names as keys.
-            count:  The method to be used to get the count of records that will be returned.
+            count:  The method to be used to get the count of records that will be returned. One of "exact", "planned" or "estimated".
             upsert: Whether to run an upsert.
         Returns:
-            [pgrest.request_builder.QueryRequestBuilder][]
+            [QueryRequestBuilder][pgrest.request_builder.QueryRequestBuilder]
         """
         prefer_headers = ["return=representation"]
         if count:
@@ -83,9 +76,9 @@ class RequestBuilder:
 
         Args:
             data: The new row data, as a dictionary, with the column names as keys.
-            count:  The method to be used to get the count of records that will be returned.
+            count:  The method to be used to get the count of records that will be returned. One of "exact", "planned" or "estimated".
         Returns:
-            [pgrest.request_builder.FilterRequestBuilder][]
+            [FilterRequestBuilder][pgrest.request_builder.FilterRequestBuilder]
         """
         prefer_headers = ["return=representation"]
         if count:
@@ -98,9 +91,9 @@ class RequestBuilder:
         Run a DELETE query to remove rows from a table.
 
         Args:
-            count:  The method to be used to get the count of records that will be returned.
+            count:  The method to be used to get the count of records that will be returned. One of "exact", "planned" or "estimated".
         Returns:
-            [pgrest.request_builder.FilterRequestBuilder][]"""
+            [FilterRequestBuilder][pgrest.request_builder.FilterRequestBuilder]"""
         prefer_headers = ["return=representation"]
         if count:
             prefer_headers.append(f"count={count}")

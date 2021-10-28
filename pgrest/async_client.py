@@ -7,7 +7,6 @@ from httpx import AsyncClient as _AsyncClient
 
 from pgrest.base_client import BaseClient
 from pgrest.constants import DEFAULT_POSTGREST_CLIENT_HEADERS
-from pgrest.request_builder import FilterRequestBuilder
 
 
 class Client(BaseClient):
@@ -19,13 +18,25 @@ class Client(BaseClient):
         *,
         schema: str = "public",
         headers: dict[str, str] = DEFAULT_POSTGREST_CLIENT_HEADERS,
+        session: Optional[_AsyncClient] = None
     ) -> None:
+        """
+        Create a PostgREST client.
+
+        Args:
+            base_url: base URL of the PostgREST API.
+            schema: Which database schema to use.
+            headers: Any headers that have to be sent with every request.
+            session: instance of httpx.AsyncClient if you want to reuse an existing one.
+        """
         headers = {
             **headers,
             "Accept-Profile": schema,
             "Content-Profile": schema,
         }
-        self.session: _AsyncClient = _AsyncClient(base_url=base_url, headers=headers)
+        self.session: _AsyncClient = session or _AsyncClient(
+            base_url=base_url, headers=headers
+        )
 
     async def __aenter__(self) -> Client:
         return self
@@ -39,9 +50,7 @@ class Client(BaseClient):
         await self.aclose()
 
     async def aclose(self) -> None:
+        """
+        Close the underlying HTTP transport and proxies.
+        """
         await self.session.aclose()
-
-    def rpc(self, func: str, params: dict) -> FilterRequestBuilder:
-        """Perform a stored procedure call."""
-        path = self._get_rpc_path(func)
-        return FilterRequestBuilder(self.session, path, "POST", params)

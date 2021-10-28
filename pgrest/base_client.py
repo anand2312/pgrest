@@ -26,9 +26,16 @@ class BaseClient:
     ) -> T:
         """
         Authenticate the client with either bearer token or basic authentication.
-
-        Raise `ValueError` if neither authentication scheme is provided.
         Bearer token is preferred if both ones are provided.
+
+        Args:
+            token: The bearer token to authenticate with.
+            username: Username
+            pasword: Password
+        Returns:
+            The modified Client instance.
+        Raises:
+            ValueError: if neither authentication scheme is provided.
         """
         if token:
             self.session.headers["Authorization"] = f"Bearer {token}"
@@ -41,15 +48,37 @@ class BaseClient:
         return self
 
     def schema(self: T, schema: str) -> T:
-        """Switch to another schema."""
+        """
+        Switch to another database schema.
+
+        Args:
+            schema: The name of the new schema to switch to.
+        Returns:
+            The modified Client instance.
+        """
         self.session.headers.update({"Accept-Profile": schema, "Content-Profile": schema})
         return self
 
     def from_(self, table: str) -> RequestBuilder:
-        """Perform a table operation."""
+        """
+        Perform a table operation.
+
+        Args:
+            table: The name of the table to query from.
+        Returns:
+            RequestBuilder
+        """
         return RequestBuilder(self.session, f"/{table}")
 
     def rpc(self, func: str, params: dict) -> FilterRequestBuilder:
-        """Perform a stored procedure call."""
+        """
+        Perform a stored procedure call.
+
+        Args:
+            func: The name of the PostgreSQL stored procedure (function) to run.
+            params: Named parameters to pass to the function.
+        Returns:
+            FilterRequestBuilder: Apply filters to the result of the function, if the function returns a table.
+        """
         path = self._get_rpc_path(func)
         return FilterRequestBuilder(self.session, path, "POST", params)

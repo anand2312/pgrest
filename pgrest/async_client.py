@@ -4,13 +4,13 @@ from types import TracebackType
 from typing import Optional, Type
 
 from httpx import AsyncClient as _AsyncClient
-from httpx import Response
 
 from pgrest.base_client import BaseClient
 from pgrest.constants import DEFAULT_POSTGREST_CLIENT_HEADERS
+from pgrest.request_builder import FilterRequestBuilder
 
 
-class AsyncClient(BaseClient):
+class Client(BaseClient):
     """Asyncio compatible PostgREST client."""
 
     def __init__(
@@ -27,7 +27,7 @@ class AsyncClient(BaseClient):
         }
         self.session: _AsyncClient = _AsyncClient(base_url=base_url, headers=headers)
 
-    async def __aenter__(self) -> AsyncClient:
+    async def __aenter__(self) -> Client:
         return self
 
     async def __aexit__(
@@ -41,8 +41,7 @@ class AsyncClient(BaseClient):
     async def aclose(self) -> None:
         await self.session.aclose()
 
-    async def rpc(self, func: str, params: dict) -> Response:
+    def rpc(self, func: str, params: dict) -> FilterRequestBuilder:
         """Perform a stored procedure call."""
         path = self._get_rpc_path(func)
-        r = await self.session.post(path, json=params)
-        return r
+        return FilterRequestBuilder(self.session, path, "POST", params)

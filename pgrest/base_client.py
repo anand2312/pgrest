@@ -4,7 +4,7 @@ from typing import AnyStr, Optional, TypeVar, Union
 
 from httpx import AsyncClient, BasicAuth, Client
 
-from pgrest.request_builder import RequestBuilder
+from pgrest.request_builder import FilterRequestBuilder, RequestBuilder
 
 T = TypeVar("T", bound="BaseClient")
 
@@ -48,3 +48,8 @@ class BaseClient:
     def from_(self, table: str) -> RequestBuilder:
         """Perform a table operation."""
         return RequestBuilder(self.session, f"/{table}")
+
+    def rpc(self, func: str, params: dict) -> FilterRequestBuilder:
+        """Perform a stored procedure call."""
+        path = self._get_rpc_path(func)
+        return FilterRequestBuilder(self.session, path, "POST", params)

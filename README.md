@@ -30,10 +30,10 @@ Once Docker Compose started, PostgREST is accessible at http://localhost:3000.
 
 ```py
 import asyncio
-from pgrest import AsyncClient
+from pgrest import Client
 
 async def main():
-    async with AsyncClient("http://localhost:3000") as client:
+    async with Client("http://localhost:3000") as client:
         r = await client.from_("countries").select("*").execute()
         countries = r[0]
 
@@ -70,13 +70,11 @@ await client.from_("countries").eq("name", "Việt Nam").delete().execute()
 ### Stored procedures (RPC)
 
 ```py
-r = await client.rpc("hello_world")
-r.json()
+r = await client.rpc("hello_world").execute()
 ```
 
 ```py
-r = await client.rpc("echo_city", params={"name": "The Shire"})
-r.json()
+r = await client.rpc("echo_city", params={"name": "The Shire"}).execute()
 ```
 
-All above methods also have synchronous counterparts, under `pgrest.Client`.
+All above methods also have synchronous counterparts, under `pgrest._sync_client.SyncClient`.

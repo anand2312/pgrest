@@ -104,12 +104,12 @@ class QueryRequestBuilder:
 
         return r.json(), count
 
-    def execute(self) -> Union[TableResponse, Awaitable[Optional[TableResponse]], None]:
+    def execute(self) -> Awaitable[Optional[TableResponse]]:
         """Execute a query."""
         if isinstance(self.session, AsyncClient):
             return self._async_request(self.http_method, self.path, json=self.json)
         else:
-            return self._sync_request(self.http_method, self.path, json=self.json)
+            return self._sync_request(self.http_method, self.path, json=self.json)  # type: ignore
 
 
 class FilterRequestBuilder(QueryRequestBuilder):

@@ -31,7 +31,7 @@ class BaseClient:
         Args:
             token: The bearer token to authenticate with.
             username: Username
-            pasword: Password
+            password: Password
         Returns:
             The modified Client instance.
         Raises:

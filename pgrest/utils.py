@@ -6,4 +6,6 @@ def sanitize_param(param: str) -> str:
 
 
 def sanitize_pattern_param(pattern: str) -> str:
-    return sanitize_param(pattern.replace("%", "*"))
+    return sanitize_param(
+        pattern.replace("%", "*")
+    )  # postgrest specifies to use * instead of %

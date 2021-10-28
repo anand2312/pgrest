@@ -35,6 +35,7 @@ plugins:
           rendering:
             show_source: false
             show_root_heading: true
+            members_order: "source"
 
 repo_name: anand2312/pgrest-client
 repo_url: https://github.com/anand2312/pgrest-client

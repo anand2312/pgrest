@@ -68,6 +68,31 @@ class RequestBuilder:
         self.session.headers["prefer"] = ",".join(prefer_headers)
         return QueryRequestBuilder(self.session, self.path, "POST", row)
 
+    def insert_many(
+        self,
+        rows: list[dict],
+        *,
+        count: Optional[CountMethod] = None,
+        upsert: bool = False,
+    ) -> QueryRequestBuilder:
+        """
+        Insert multiple rows to the same table at once.
+
+        Args:
+            rows: The list of rows to be inserted, where each row is a dictionary, with the column names as keys.
+            count:  The method to be used to get the count of records that will be returned. One of "exact", "planned" or "estimated".
+            upsert: Whether to run an upsert.
+        Returns:
+            [QueryRequestBuilder][pgrest.request_builder.QueryRequestBuilder]
+        """
+        prefer_headers = ["return=representation"]
+        if count:
+            prefer_headers.append(f"count={count}")
+        if upsert:
+            prefer_headers.append("resolution=merge-duplicates")
+        self.session.headers["prefer"] = ",".join(prefer_headers)
+        return QueryRequestBuilder(self.session, self.path, "POST", rows)
+
     def update(
         self, data: dict, *, count: Optional[CountMethod] = None
     ) -> FilterRequestBuilder:
@@ -107,7 +132,7 @@ class QueryRequestBuilder:
         session: Union[AsyncClient, Client],
         path: str,
         http_method: RequestMethod,
-        json: dict,
+        json: Union[list, dict],
     ):
         self.session = session
         self.path = path
@@ -115,7 +140,7 @@ class QueryRequestBuilder:
         self.json = json
 
     def _sync_request(
-        self, method: RequestMethod, path: str, json: dict
+        self, method: RequestMethod, path: str, json: Union[list, dict]
     ) -> Optional[TableResponse]:
         if isinstance(self.session, AsyncClient):
             return
@@ -124,7 +149,7 @@ class QueryRequestBuilder:
         return self._handle_response(r)
 
     async def _async_request(
-        self, method: RequestMethod, path: str, json: dict
+        self, method: RequestMethod, path: str, json: Union[list, dict]
     ) -> Optional[TableResponse]:
         if isinstance(self.session, Client):
             return
@@ -146,7 +171,12 @@ class QueryRequestBuilder:
         return r.json(), count
 
     def execute(self) -> Awaitable[Optional[TableResponse]]:
-        """Execute a query."""
+        """
+        Execute a query to get the response.
+
+        Returns:
+            TableResponse: A two-tuple, with the first element being the rows returned, and the second element being the count.
+        """
         if isinstance(self.session, AsyncClient):
             return self._async_request(self.http_method, self.path, json=self.json)
         else:
@@ -167,11 +197,26 @@ class FilterRequestBuilder(QueryRequestBuilder):
 
     @property
     def not_(self):
+        """Negate the next filter that is applied."""
         self.negate_next = True
         return self
 
-    def filter(self, column: str, operator: str, criteria: str):
-        """Either filter in or filter out based on Self.negate_next."""
+    def filter(self, column: str, operator: str, criteria: str) -> FilterRequestBuilder:
+        """
+        Apply filters to your query, equivalent to the WHERE clause in SQL.
+
+        Args:
+            column: The column to filter by.
+            operator: The operator to filter with.
+            criteria: The value to filter with.
+        Returns:
+            [FilterRequestBuilder][pgrest.request_builder.FilterRequestBuilder]
+
+        !!! note
+            The filter methods all return an instance of FilterRequestBuilder, allowing for rich chaining of filters.
+        !!! note
+            Refer the [PostgREST docs](https://postgrest.org/en/v8.0/api.html?highlight=filters#operators) for more info about operators.
+        """
         if self.negate_next is True:
             self.negate_next = False
             operator = f"not.{operator}"
@@ -179,86 +224,145 @@ class FilterRequestBuilder(QueryRequestBuilder):
         self.session.params = self.session.params.add(key, val)
         return self
 
-    def eq(self, column: str, value: str):
+    def eq(self, column: str, value: str) -> FilterRequestBuilder:
+        """
+        Operator: "equals to"
+        """
         return self.filter(column, "eq", sanitize_param(value))
 
-    def neq(self, column: str, value: str):
+    def neq(self, column: str, value: str) -> FilterRequestBuilder:
+        """
+        Operator: "not equal to"
+        """
         return self.filter(column, "neq", sanitize_param(value))
 
-    def gt(self, column: str, value: str):
+    def gt(self, column: str, value: str) -> FilterRequestBuilder:
+        """
+        Operator: "greater than"
+        """
         return self.filter(column, "gt", sanitize_param(value))
 
-    def gte(self, column: str, value: str):
+    def gte(self, column: str, value: str) -> FilterRequestBuilder:
+        """
+        Operator: "greater than or equal to"
+        """
         return self.filter(column, "gte", sanitize_param(value))
 
-    def lt(self, column: str, value: str):
+    def lt(self, column: str, value: str) -> FilterRequestBuilder:
+        """
+        Operator: "less than"
+        """
         return self.filter(column, "lt", sanitize_param(value))
 
-    def lte(self, column: str, value: str):
+    def lte(self, column: str, value: str) -> FilterRequestBuilder:
+        """
+        Operator: "less than or equal to"
+        """
         return self.filter(column, "lte", sanitize_param(value))
 
-    def is_(self, column: str, value: str):
+    def is_(self, column: str, value: str) -> FilterRequestBuilder:
+        """
+        Operator: "is" (checking for exact equality, like null, true, false)
+        """
         return self.filter(column, "is", sanitize_param(value))
 
-    def like(self, column: str, pattern: str):
+    def like(self, column: str, pattern: str) -> FilterRequestBuilder:
+        """
+        Operator: "like" for matching based on patterns
+        """
         return self.filter(column, "like", sanitize_pattern_param(pattern))
 
-    def ilike(self, column: str, pattern: str):
+    def ilike(self, column: str, pattern: str) -> FilterRequestBuilder:
+        """
+        Operator: "ilike", case-insensitive LIKE.
+        """
         return self.filter(column, "ilike", sanitize_pattern_param(pattern))
 
-    def fts(self, column: str, query: str):
+    def fts(self, column: str, query: str) -> FilterRequestBuilder:
+        """
+        Operator: Full-Text search, using [to_tsquery](https://www.postgresql.org/docs/12/functions-textsearch.html)
+        """
         return self.filter(column, "fts", sanitize_param(query))
 
-    def plfts(self, column: str, query: str):
+    def plfts(self, column: str, query: str) -> FilterRequestBuilder:
+        """
+        Operator: Full-Text search using [plainto_tsquery](https://www.postgresql.org/docs/12/functions-textsearch.html)
+        """
         return self.filter(column, "plfts", sanitize_param(query))
 
-    def phfts(self, column: str, query: str):
+    def phfts(self, column: str, query: str) -> FilterRequestBuilder:
+        """
+        Operator: Full-Text search using [phraseto_tsquery](https://www.postgresql.org/docs/12/functions-textsearch.html)
+        """
         return self.filter(column, "phfts", sanitize_param(query))
 
-    def wfts(self, column: str, query: str):
+    def wfts(self, column: str, query: str) -> FilterRequestBuilder:
+        """
+        Operator: Full-Text search using [websearch_to_tsquery](https://www.postgresql.org/docs/12/functions-textsearch.html)
+        """
         return self.filter(column, "wfts", sanitize_param(query))
 
-    def in_(self, column: str, values: Iterable[str]):
+    def in_(self, column: str, values: Iterable[str]) -> FilterRequestBuilder:
+        """
+        Operator: "in". Check if `column` is in `values`
+        """
         values = map(sanitize_param, values)
         values = ",".join(values)
         return self.filter(column, "in", f"({values})")
 
-    def cs(self, column: str, values: Iterable[str]):
+    def cs(self, column: str, values: Iterable[str]) -> FilterRequestBuilder:
+        """
+        Operator: contains
+        """
         values = map(sanitize_param, values)
         values = ",".join(values)
         return self.filter(column, "cs", f"{{values}}")
 
-    def cd(self, column: str, values: Iterable[str]):
+    def cd(self, column: str, values: Iterable[str]) -> FilterRequestBuilder:
+        """
+        Operator: contained in
+        """
         values = map(sanitize_param, values)
         values = ",".join(values)
         return self.filter(column, "cd", f"{{values}}")
 
-    def ov(self, column: str, values: Iterable[str]):
+    def ov(self, column: str, values: Iterable[str]) -> FilterRequestBuilder:
+        """
+        Operator: overlap (have points in common)
+        """
         values = map(sanitize_param, values)
         values = ",".join(values)
         return self.filter(column, "ov", f"{{values}}")
 
-    def sl(self, column: str, range: tuple[int, int]):
+    def sl(self, column: str, range: tuple[int, int]) -> FilterRequestBuilder:
+        """
+        Operator: strictly left of
+        """
         return self.filter(column, "sl", f"({range[0]},{range[1]})")
 
-    def sr(self, column: str, range: tuple[int, int]):
+    def sr(self, column: str, range: tuple[int, int]) -> FilterRequestBuilder:
+        """
+        Operator: strictly right of
+        """
         return self.filter(column, "sr", f"({range[0]},{range[1]})")
 
-    def nxl(self, column: str, range: tuple[int, int]):
+    def nxl(self, column: str, range: tuple[int, int]) -> FilterRequestBuilder:
+        """
+        Operator: does not extend to the left of
+        """
         return self.filter(column, "nxl", f"({range[0]},{range[1]})")
 
-    def nxr(self, column: str, range: tuple[int, int]):
+    def nxr(self, column: str, range: tuple[int, int]) -> FilterRequestBuilder:
+        """
+        Operator: does not extend to the right of
+        """
         return self.filter(column, "nxr", f"({range[0]},{range[1]})")
 
-    def adj(self, column: str, range: tuple[int, int]):
+    def adj(self, column: str, range: tuple[int, int]) -> FilterRequestBuilder:
+        """
+        Operator: is adjacent to
+        """
         return self.filter(column, "adj", f"({range[0]},{range[1]})")
-
-    def match(self, query: dict[str, Any]):
-        updated_query = None
-        for key in query.keys():
-            value = query.get(key, "")
-            updated_query = self.eq(key, value)
-        return updated_query
 
 
 class SelectRequestBuilder(FilterRequestBuilder):

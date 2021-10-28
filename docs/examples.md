@@ -18,6 +18,13 @@ asyncio.run(main())
 await client.from_("countries").insert({ "name": "Việt Nam", "capital": "Hà Nội" }).execute()
 ```
 
+### Bulk Insert
+
+```py
+rows = [{"name": "India", "capital": "New Delhi"}, {"name": "Japan", "capital": "Tokyo"}]
+await client.from_("countries").insert_many(rows).execute()
+```
+
 ### Read
 
 ```py

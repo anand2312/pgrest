@@ -1,8 +1,8 @@
 # Changelog
 
-## v0.0.1
+## v0.5.0
 
-Initial release.
+Initial release. I messed up and released at 0.5.0.
 
 ### New features
 

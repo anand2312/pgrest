@@ -366,23 +366,59 @@ class FilterRequestBuilder(QueryRequestBuilder):
 
 
 class SelectRequestBuilder(FilterRequestBuilder):
-    def order(self, column: str, *, desc=False, nullsfirst=False):
+    def order(
+        self, column: str, *, desc: bool = False, nullsfirst: bool = False
+    ) -> SelectRequestBuilder:
+        """
+        Sort the query response in some order.
+        Equivalent to SQL ORDER BY column ASC | DESC
+
+        Args:
+            column: Name of the column to sort by
+            desc: Whether to sort in descending order
+            nullsfirst: Nulls first
+        Returns:
+            [SelectRequestBuilder][pgrest.request_builder.SelectRequestBuilder]
+        """
         self.session.params[
             "order"
         ] = f"{column}{'.desc' if desc else ''}{'.nullsfirst' if nullsfirst else ''}"
 
         return self
 
-    def limit(self, size: int, *, start=0):
+    def limit(self, size: int, *, start: int = 0) -> SelectRequestBuilder:
+        """
+        Limit the number of rows returned by the query.
+
+        Args:
+            size: The number of rows to return
+            start: The index of rows to start from (OFFSET)
+        Returns:
+            [SelectRequestBuilder][pgrest.request_builder.SelectRequestBuilder]
+        """
         self.session.headers["Range-Unit"] = "items"
         self.session.headers["Range"] = f"{start}-{start + size - 1}"
         return self
 
-    def range(self, start: int, end: int):
+    def range(self, start: int, end: int) -> SelectRequestBuilder:
+        """
+        Retrieve only rows in a specific range.
+
+        Args:
+            start
+            end
+        Returns:
+            [SelectRequestBuilder][pgrest.request_builder.SelectRequestBuilder]
+        """
         self.session.headers["Range-Unit"] = "items"
         self.session.headers["Range"] = f"{start}-{end - 1}"
         return self
 
-    def single(self):
+    def single(self) -> SelectRequestBuilder:
+        """
+        Return only a single row.
+        !!! warn
+            This method will raise an error if the query matched more than one valid row.
+        """
         self.session.headers["Accept"] = "application/vnd.pgrst.object+json"
         return self

@@ -12,6 +12,7 @@ else:
 
 from httpx import AsyncClient, Client, Response
 
+from pgrest.column import Column, Condition
 from pgrest.utils import sanitize_param, sanitize_pattern_param
 
 CountMethod = Literal["exact", "planned", "estimated"]
@@ -201,6 +202,36 @@ class FilterRequestBuilder(QueryRequestBuilder):
         self.negate_next = True
         return self
 
+    def where(self, condition: Condition) -> FilterRequestBuilder:
+        """
+        Apply filters to your query, equivalent to the WHERE clause in SQL.
+
+        !!! note
+            This is meant to be used with [Column][pgrest.column.Column] querying syntax.
+
+        Args:
+            condition: The filter conditions to apply
+        Returns:
+            [FilterRequestBuilder][pgrest.request_builder.FilterRequestBuilder]
+        Example:
+            ```py
+            from pgrest import Column
+            # single filter
+            res = await client.from_("countries").select("*").where(Column("name") == "India")
+
+            # filters can also be chained into a long condition
+            res = await client.from_("countries").select("*").where(Column("name") == "India" & Column("population") > 100000)
+
+        !!! note
+            This form of querying turns out to be more clear in some cases, but in cases of operators that aren't default Python operators,
+            using the [filter][pgrest.request_builder.FilterRequestBuilder.filter] method might be better.
+        """
+        for key, value in condition.flatten_params():
+            if key in ["or", "and"]:
+                value = f"({value})"
+            self.session.params = self.session.params.add(key, value)
+        return self
+
     def filter(self, column: str, operator: str, criteria: str) -> FilterRequestBuilder:
         """
         Apply filters to your query, equivalent to the WHERE clause in SQL.
@@ -211,6 +242,19 @@ class FilterRequestBuilder(QueryRequestBuilder):
             criteria: The value to filter with.
         Returns:
             [FilterRequestBuilder][pgrest.request_builder.FilterRequestBuilder]
+        Example:
+            ```py
+            # single filter
+            res = await client.from_("countries").select("*").filter("name", "eq", "India").execute()
+
+            # filters can be chained
+            res = await client
+                .from_("countries")
+                .select("*")
+                .eq("name", "India")
+                .ilike("capital", "%el%")
+                .execute()
+            ```
 
         !!! note
             The filter methods all return an instance of FilterRequestBuilder, allowing for rich chaining of filters.
@@ -220,7 +264,7 @@ class FilterRequestBuilder(QueryRequestBuilder):
         if self.negate_next is True:
             self.negate_next = False
             operator = f"not.{operator}"
-        key, val = sanitize_param(column), f"{operator}.{criteria}"
+        key, val = sanitize_param(column), f"{operator}.{sanitize_param(criteria)}"
         self.session.params = self.session.params.add(key, val)
         return self
 

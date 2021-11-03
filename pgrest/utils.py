@@ -1,4 +1,5 @@
 def sanitize_param(param: str) -> str:
+    param = str(param)
     reserved_chars = ",.:()"
     if any(char in param for char in reserved_chars):
         return f"%22{param}%22"

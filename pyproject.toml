@@ -12,6 +12,7 @@ documentation = "https://anand2312.github.io/pgrest"
 [tool.poetry.dependencies]
 python = "^3.7"
 httpx = "^0.20.0"
+multidict = "^5.2.0"
 
 [tool.poetry.dev-dependencies]
 pytest = "^6.2.4"

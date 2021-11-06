@@ -1,4 +1,4 @@
-# pgrest-client
+# pgrest
 
 PostgREST client for Python. This library provides an ORM interface to PostgREST.
 
@@ -8,6 +8,7 @@ Fork of the supabase community Postgrest Client library for Python.
 
 ## TODOS:
 
-- upsert methods
-- AND/OR filtering
-- allow users to pass response models?
+[] upsert methods
+[x] AND/OR filtering (v0.6.0)
+[] allow users to pass response models?
+[] add configuration parameter to text-search functions

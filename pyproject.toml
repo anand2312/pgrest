@@ -1,7 +1,7 @@
 [tool.poetry]
 name = "pgrest"
 description = "A Python client library for PostgREST APIs. "
-version = "0.6.0"
+version = "0.7.0"
 authors = ["Anand Krishna <anandkrishna2312@gmail.com>"]
 license = "MIT"
 readme = "README.md"

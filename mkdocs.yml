@@ -20,11 +20,16 @@ theme:
         name: Switch to dark mode
 nav:
   - Home: index.md
-  - Examples: examples.md
+  - Quickstart: quickstart.md
   - Changelog: changelog.md
-  - Reference:
+  - Examples:
+      - Queries:
+          - Simple-style Queries: examples/queries/simple-queries.md
+          - Filter-style Queries: examples/queries/filter-queries.md
+  - API Reference:
       - Client: reference/client.md
-      - Builders: reference/builders.md
+      - Query Builders: reference/builders.md
+      - Column: reference/query.md
 
 plugins:
   - search

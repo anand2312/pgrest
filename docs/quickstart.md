@@ -7,6 +7,7 @@ from pgrest import Client
 async def main():
     async with Client("http://localhost:3000") as client:
         r = await client.from_("countries").select("*").execute()
+        # execute returns a two-tuple, where the first element is the data.
         countries = r[0]
 
 asyncio.run(main())

@@ -1,4 +1,7 @@
-def sanitize_param(param: str) -> str:
+from typing import Any
+
+
+def sanitize_param(param: Any) -> str:
     param = str(param)
     reserved_chars = ",.:()"
     if any(char in param for char in reserved_chars):

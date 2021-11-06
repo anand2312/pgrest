@@ -12,7 +12,7 @@ else:
 
 from httpx import AsyncClient, Client, Response
 
-from pgrest.column import Column, Condition
+from pgrest.query import Condition
 from pgrest.utils import sanitize_param, sanitize_pattern_param
 
 CountMethod = Literal["exact", "planned", "estimated"]
@@ -206,9 +206,6 @@ class FilterRequestBuilder(QueryRequestBuilder):
         """
         Apply filters to your query, equivalent to the WHERE clause in SQL.
 
-        !!! note
-            This is meant to be used with [Column][pgrest.column.Column] querying syntax.
-
         Args:
             condition: The filter conditions to apply
         Returns:
@@ -221,12 +218,13 @@ class FilterRequestBuilder(QueryRequestBuilder):
 
             # filters can also be chained into a long condition
             res = await client.from_("countries").select("*").where(Column("name") == "India" & Column("population") > 100000)
+            ```
 
         !!! note
-            This form of querying turns out to be more clear in some cases, but in cases of operators that aren't default Python operators,
+            This form of querying turns out to be more clear in some cases, but in some cases,
             using the [filter][pgrest.request_builder.FilterRequestBuilder.filter] method might be better.
         """
-        for key, value in condition.flatten_params():
+        for key, value in condition.flatten_params().items():
             if key in ["or", "and"]:
                 value = f"({value})"
             self.session.params = self.session.params.add(key, value)
@@ -258,7 +256,7 @@ class FilterRequestBuilder(QueryRequestBuilder):
 
         !!! note
             The filter methods all return an instance of FilterRequestBuilder, allowing for rich chaining of filters.
-        !!! note
+        !!! tip
             Refer the [PostgREST docs](https://postgrest.org/en/v8.0/api.html?highlight=filters#operators) for more info about operators.
         """
         if self.negate_next is True:
@@ -449,8 +447,8 @@ class SelectRequestBuilder(FilterRequestBuilder):
         Retrieve only rows in a specific range.
 
         Args:
-            start
-            end
+            start: The index of rows to start from
+            end: The index of the last row to retrieve
         Returns:
             [SelectRequestBuilder][pgrest.request_builder.SelectRequestBuilder]
         """
@@ -461,7 +459,7 @@ class SelectRequestBuilder(FilterRequestBuilder):
     def single(self) -> SelectRequestBuilder:
         """
         Return only a single row.
-        !!! warn
+        !!! warning
             This method will raise an error if the query matched more than one valid row.
         """
         self.session.headers["Accept"] = "application/vnd.pgrst.object+json"

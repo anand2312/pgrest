@@ -1,9 +1,10 @@
 from __future__ import annotations
 
+from enum import Enum
 from typing import AnyStr, Optional, TypeVar, Union
 
 from httpx import AsyncClient, BasicAuth, Client
-from pydantic.main import BaseModel
+from pydantic import BaseModel
 
 from pgrest.request_builder import FilterRequestBuilder, RequestBuilder
 
@@ -13,6 +14,8 @@ T = TypeVar("T", bound="BaseClient")
 class BaseClient:
     def __init__(self) -> None:
         self.session: Union[Client, AsyncClient]
+        self._models: dict[str, BaseModel]
+        self._enums: dict[str, Enum]
 
     @staticmethod
     def _get_rpc_path(func: str) -> str:
@@ -84,8 +87,35 @@ class BaseClient:
         path = self._get_rpc_path(func)
         return FilterRequestBuilder(self.session, path, "POST", params)
 
-    def fetch_models(self) -> list[BaseModel]:
+    def fetch_database_types(self) -> None:
+        """
+        Fetch the database models and enumerations from the openapi.json file hosted by PostgREST, and cache them.
+
+        !!! warn
+            This method only needs to be called if you want the responses to be parsed into Pydantic objects.
+        """
         raise NotImplementedError
 
-    def get_model(self, table: str) -> BaseModel:
-        raise NotImplementedError
+    def get_model(self, table: str) -> Optional[BaseModel]:
+        """
+        Get the [Model](https://pydantic-docs.helpmanual.io/usage/models/) associated with the specified table, from the client's cache.
+
+        Args:
+            table: The name of the table to fetch the Model for
+        Returns:
+            Model: The associated Model.
+            None: If the model was not cached.
+        """
+        return self._models.get(table)
+
+    def get_enum(self, enum: str) -> Optional[Enum]:
+        """
+        Get the Python [Enum](https://docs.python.org/3/library/enum.html#enum.Enum) associated with an enum defined in SQL.
+
+        Args:
+            enum: The fully qualified name of the enum. For example: If an enum is named `colors` under the `public` schema, pass `public.colors`
+        Returns:
+            Enum: The associated Enum.
+            None: If the enum was not cached.
+        """
+        return self._enums.get(enum)

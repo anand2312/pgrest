@@ -25,6 +25,8 @@ class SyncClient(BaseClient):
             "Content-Profile": schema,
         }
         self.session: _Client = _Client(base_url=base_url, headers=headers)
+        self._models = {}
+        self._enums = {}
 
     def __enter__(self) -> SyncClient:
         return self
@@ -40,3 +42,11 @@ class SyncClient(BaseClient):
     def close(self) -> None:
         """Close the underlying HTTP transport and proxies."""
         self.session.close()
+
+    def fetch_database_types(self) -> None:
+        """
+        Fetch the database models and enumerations from the openapi.json file hosted by PostgREST, and cache them.
+
+        !!! warn
+            This method only needs to be called if you want the responses to be parsed into Pydantic objects.
+        """

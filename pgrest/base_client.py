@@ -3,6 +3,7 @@ from __future__ import annotations
 from typing import AnyStr, Optional, TypeVar, Union
 
 from httpx import AsyncClient, BasicAuth, Client
+from pydantic.main import BaseModel
 
 from pgrest.request_builder import FilterRequestBuilder, RequestBuilder
 
@@ -82,3 +83,9 @@ class BaseClient:
         """
         path = self._get_rpc_path(func)
         return FilterRequestBuilder(self.session, path, "POST", params)
+
+    def fetch_models(self) -> list[BaseModel]:
+        raise NotImplementedError
+
+    def get_model(self, table: str) -> BaseModel:
+        raise NotImplementedError

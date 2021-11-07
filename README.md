@@ -8,7 +8,7 @@ Fork of the supabase community Postgrest Client library for Python.
 
 ## TODOS:
 
-[] upsert methods
-[x] AND/OR filtering (v0.6.0)
-[] allow users to pass response models?
-[] add configuration parameter to text-search functions
+- [ ] upsert methods
+- [x] AND/OR filtering (v0.7.0)
+- [ ] allow users to pass response models?
+- [ ] add configuration parameter to text-search functions

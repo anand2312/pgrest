@@ -54,5 +54,3 @@ r = await client.rpc("hello_world").execute()
 ```py
 r = await client.rpc("echo_city", params={"name": "The Shire"}).execute()
 ```
-
-All above methods have synchronous counterparts in `pgrest._sync_client.SyncClient`, although the asynchronous functionality is the focus of this library, and is recommended to be used.

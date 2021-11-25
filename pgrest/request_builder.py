@@ -19,7 +19,7 @@ from pgrest.exceptions import (
     UndefinedResourceError,
 )
 from pgrest.query import Condition
-from pgrest.utils import sanitize_param, sanitize_pattern_param
+from pgrest.utils import JSONEncoder, sanitize_param, sanitize_pattern_param
 
 CountMethod = Literal["exact", "planned", "estimated"]
 RequestMethod = Literal["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"]
@@ -79,6 +79,8 @@ class RequestBuilder:
             upsert: Whether to run an upsert.
         Returns:
             [QueryRequestBuilder][pgrest.request_builder.QueryRequestBuilder]
+        !!! note:
+            This method will return the rows that were inserted.
         """
         prefer_headers = ["return=representation"]
         if count:
@@ -104,6 +106,8 @@ class RequestBuilder:
             upsert: Whether to run an upsert.
         Returns:
             [QueryRequestBuilder][pgrest.request_builder.QueryRequestBuilder]
+        !!! note:
+            This method will return the rows that were inserted.
         """
         prefer_headers = ["return=representation"]
         if count:
@@ -173,7 +177,11 @@ class QueryRequestBuilder:
         Returns:
             TableResponse: A two-tuple, with the first element being the rows returned, and the second element being the count.
         """
-        r = await self.session.request(self.http_method, self.path, json=self.json)
+        data = JSONEncoder().encode(self.json)
+        r = await self.session.request(self.http_method, self.path, data=data)  # type: ignore
+        # bug with type annotation in httpx source
+        # RequestData set to type dict although it should be str
+        # https://github.com/encode/httpx/blob/efc841a9e8e709f5cc40257927dd7461dc832330/httpx/_types.py#L82
 
         try:
             r.raise_for_status()

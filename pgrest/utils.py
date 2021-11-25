@@ -1,5 +1,8 @@
+from datetime import datetime
+from json import JSONEncoder as _JSONEncoder
 from types import ModuleType
 from typing import Any, Callable, Optional
+from uuid import UUID
 
 
 def sanitize_param(param: Any) -> str:
@@ -31,3 +34,15 @@ def check_optional(name: str, obj: Optional[ModuleType]) -> Callable:
         return inner_wrapper
 
     return wrapper
+
+
+class JSONEncoder(_JSONEncoder):
+    # encode datetime, UUID and bytes objects
+    def default(self, o: Any) -> str:
+        if isinstance(o, datetime):
+            return o.isoformat()
+        elif isinstance(o, UUID):
+            return str(o)
+        elif isinstance(o, bytes):
+            return "\\x" + o.hex()
+        return super().default(o)

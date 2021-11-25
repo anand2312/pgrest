@@ -173,7 +173,7 @@ class QueryRequestBuilder:
         Returns:
             TableResponse: A two-tuple, with the first element being the rows returned, and the second element being the count.
         """
-        r = await self.session.request(self.http_method, self.path)
+        r = await self.session.request(self.http_method, self.path, json=self.json)
 
         try:
             r.raise_for_status()
@@ -182,8 +182,7 @@ class QueryRequestBuilder:
 
             if not ErrClass:
                 ErrClass = PostgrestError
-
-            raise ErrClass(**r.json(), http_status=r.status_code)
+            raise ErrClass(**r.json(), http_status=r.status_code) from None
 
         try:
             count_header_match = re.search(

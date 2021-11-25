@@ -2,26 +2,45 @@ from __future__ import annotations
 
 import re
 import sys
-from contextlib import suppress
-from typing import Any, Awaitable, Iterable, Optional, Union
+from typing import Any, Dict, Iterable, NamedTuple, Optional, Type, Union
 
 if sys.version_info < (3, 8):
     from typing_extensions import Literal
 else:
     from typing import Literal
 
-from httpx import AsyncClient, Client, Response
+from httpx import AsyncClient, HTTPError
 
+from pgrest.exceptions import (
+    AuthenticationError,
+    ConstraintViolation,
+    DatabaseError,
+    PostgrestError,
+    UndefinedResourceError,
+)
 from pgrest.query import Condition
 from pgrest.utils import sanitize_param, sanitize_pattern_param
 
 CountMethod = Literal["exact", "planned", "estimated"]
 RequestMethod = Literal["GET", "POST", "PUT", "PATCH", "DELETE", "HEAD"]
-TableResponse = tuple[Any, Optional[int]]
+
+error_map: Dict[int, Type[PostgrestError]] = {
+    409: ConstraintViolation,
+    503: DatabaseError,
+    403: AuthenticationError,
+    404: UndefinedResourceError,
+}
+
+
+class TableResponse(NamedTuple):
+    """Represents the response from the API."""
+
+    rows: Optional[Iterable[Any]]
+    count: Optional[int]
 
 
 class RequestBuilder:
-    def __init__(self, session: Union[AsyncClient, Client], path: str) -> None:
+    def __init__(self, session: AsyncClient, path: str) -> None:
         self.session = session
         self.path = path
 
@@ -91,7 +110,7 @@ class RequestBuilder:
             prefer_headers.append(f"count={count}")
         if upsert:
             prefer_headers.append("resolution=merge-duplicates")
-        self.session.headers["prefer"] = ",".join(prefer_headers)
+        self.session.headers["Prefer"] = ",".join(prefer_headers)
         return QueryRequestBuilder(self.session, self.path, "POST", rows)
 
     def update(
@@ -105,11 +124,14 @@ class RequestBuilder:
             count:  The method to be used to get the count of records that will be returned. One of "exact", "planned" or "estimated".
         Returns:
             [FilterRequestBuilder][pgrest.request_builder.FilterRequestBuilder]
+
+        !!! note:
+            This method will return the rows that were modified.
         """
         prefer_headers = ["return=representation"]
         if count:
             prefer_headers.append(f"count={count}")
-        self.session.headers["prefer"] = ",".join(prefer_headers)
+        self.session.headers["Prefer"] = ",".join(prefer_headers)
         return FilterRequestBuilder(self.session, self.path, "PATCH", data)
 
     def delete(self, *, count: Optional[CountMethod] = None) -> FilterRequestBuilder:
@@ -119,18 +141,22 @@ class RequestBuilder:
         Args:
             count:  The method to be used to get the count of records that will be returned. One of "exact", "planned" or "estimated".
         Returns:
-            [FilterRequestBuilder][pgrest.request_builder.FilterRequestBuilder]"""
+            [FilterRequestBuilder][pgrest.request_builder.FilterRequestBuilder]
+
+        !!! note:
+            This method will return the rows that were modified.
+        """
         prefer_headers = ["return=representation"]
         if count:
             prefer_headers.append(f"count={count}")
-        self.session.headers["prefer"] = ",".join(prefer_headers)
+        self.session.headers["Prefer"] = ",".join(prefer_headers)
         return FilterRequestBuilder(self.session, self.path, "DELETE", {})
 
 
 class QueryRequestBuilder:
     def __init__(
         self,
-        session: Union[AsyncClient, Client],
+        session: AsyncClient,
         path: str,
         http_method: RequestMethod,
         json: Union[list, dict],
@@ -140,54 +166,44 @@ class QueryRequestBuilder:
         self.http_method: RequestMethod = http_method
         self.json = json
 
-    def _sync_request(
-        self, method: RequestMethod, path: str, json: Union[list, dict]
-    ) -> Optional[TableResponse]:
-        if isinstance(self.session, AsyncClient):
-            return
-
-        r = self.session.request(method, path, json=json)
-        return self._handle_response(r)
-
-    async def _async_request(
-        self, method: RequestMethod, path: str, json: Union[list, dict]
-    ) -> Optional[TableResponse]:
-        if isinstance(self.session, Client):
-            return
-
-        r = await self.session.request(method, path, json=json)
-        return self._handle_response(r)
-
-    def _handle_response(self, r: Response) -> tuple[Any, Optional[int]]:
-        count = None
-
-        with suppress(KeyError):
-            count_header_match = re.search(
-                "count=(exact|planned|estimated)", self.session.headers["prefer"]
-            )
-            content_range = r.headers["content-range"].split("/")
-            if count_header_match and len(content_range) >= 2:
-                count = int(content_range[1])
-
-        return r.json(), count
-
-    def execute(self) -> Awaitable[Optional[TableResponse]]:
+    async def execute(self) -> Optional[TableResponse]:
         """
         Execute a query to get the response.
 
         Returns:
             TableResponse: A two-tuple, with the first element being the rows returned, and the second element being the count.
         """
-        if isinstance(self.session, AsyncClient):
-            return self._async_request(self.http_method, self.path, json=self.json)
-        else:
-            return self._sync_request(self.http_method, self.path, json=self.json)  # type: ignore
+        r = await self.session.request(self.http_method, self.path)
+
+        try:
+            r.raise_for_status()
+        except HTTPError:
+            ErrClass = error_map.get(r.status_code)
+
+            if not ErrClass:
+                ErrClass = PostgrestError
+
+            raise ErrClass(**r.json(), http_status=r.status_code)
+
+        try:
+            count_header_match = re.search(
+                "count=(exact|planned|estimated)", self.session.headers["prefer"]
+            )
+            content_range = r.headers["content-range"].split("/")
+            if count_header_match and len(content_range) >= 2:
+                count = int(content_range[1])
+            else:
+                count = None
+        except KeyError:
+            count = None
+
+        return TableResponse(rows=r.json(), count=count)
 
 
 class FilterRequestBuilder(QueryRequestBuilder):
     def __init__(
         self,
-        session: Union[AsyncClient, Client],
+        session: AsyncClient,
         path: str,
         http_method: RequestMethod,
         json: dict,

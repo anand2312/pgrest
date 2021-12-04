@@ -30,6 +30,7 @@ nav:
       - Client: reference/client.md
       - Query Builders: reference/builders.md
       - Column: reference/query.md
+      - Exceptions: reference/exceptions.md
 
 plugins:
   - search

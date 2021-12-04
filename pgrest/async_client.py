@@ -28,6 +28,11 @@ class Client(BaseClient):
             schema: Which database schema to use.
             headers: Any headers that have to be sent with every request.
             session: instance of httpx.AsyncClient if you want to reuse an existing one.
+
+        !!! tip
+            Calling [`Client.fetch_database_types`][pgrest.Client.fetch_database_types] before running any queries, adds some extra
+            parsing and validation (for example: timestamp/date/time fields are parsed into proper Python objects automatically)
+            by using [Pydantic Models][https://pydantic-docs.helpmanual.io/usage/models] which can be quite convenient.
         """
         headers = {
             **headers,
@@ -37,6 +42,8 @@ class Client(BaseClient):
         self.session: _AsyncClient = session or _AsyncClient(
             base_url=base_url, headers=headers
         )
+        self._models = {}
+        self._enums = {}
 
     async def __aenter__(self) -> Client:
         return self
@@ -54,3 +61,11 @@ class Client(BaseClient):
         Close the underlying HTTP transport and proxies.
         """
         await self.session.aclose()
+
+    async def fetch_database_types(self) -> None:
+        """
+        Fetch the database models and enumerations from the openapi.json file hosted by PostgREST, and cache them.
+
+        !!! warn
+            This method only needs to be called if you want the responses to be parsed into Pydantic objects.
+        """

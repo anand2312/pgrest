@@ -11,7 +11,7 @@ Before running any queries, you need to initialize the client:
 ```py
 from pgrest import Client
 
-client = Client(""http://localhost:3000")  # pass in your postgrest API url
+client = Client("http://localhost:3000")  # pass in your postgrest API url
 client.auth("bearer token")  # pass in your API bearer token
 ```
 
@@ -36,7 +36,7 @@ from pgrest import Column
 # | means OR, & means AND
 r = await client.from_("countries")
     .select("*")
-    .where(Column("population") >= 10_000_000 & Column("population") <= 20_000_000 | Column("name").ilike("%stan"))
+    .where((Column("population") >= 10_000_000) & (Column("population") <= 20_000_000) | (Column("name").ilike("%stan")))
     .execute()
 # this query fetches all countries whose population is between 10 million and 20 million, or whose name ends in `stan`
 ```
